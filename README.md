@@ -1,2 +1,2 @@
-# avatarconnect
-Undergraduate Thesis Project: 3D Avatar AI Multilingual Chatbot designed for Students
+# AvatarConnect (Undergraduate Thesis Project)
+A 3D AI multilingual chatbot designed to support and engage students.
