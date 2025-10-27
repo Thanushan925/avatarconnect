@@ -3,6 +3,8 @@ import { RxAvatar, RxHamburgerMenu } from "react-icons/rx";
 
 function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLang, setShowLang] = useState(false);
+  const [selectedLang, setSelectedLang] = useState("English");
 
   return (
     <div className="flex h-screen bg-[#C0E4FF] text-gray-900">
@@ -42,11 +44,42 @@ function Home() {
           <h1 className="text-2xl font-semibold text-gray-900">AvatarConnect</h1>
 
           {/* Language dropdown top-right */}
-          <select className="absolute right-4 border rounded-md px-2 py-1 text-sm bg-white shadow-sm focus:outline-none focus:ring-1 focus:ring-gray-400">
-            <option>English</option>
-            <option>French</option>
-            <option>Spanish</option>
-          </select>
+          <div className="absolute right-4">
+            <div className="relative inline-block text-left">
+              <button
+                onClick={() => setShowLang((prev) => !prev)}
+                className="inline-flex justify-center items-center w-28 px-3 py-2 bg-gray-100 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+              >
+                {selectedLang}
+                <svg
+                  className="w-4 h-4 ml-2 -mr-1 text-gray-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showLang && (
+                <div className="absolute right-0 mt-2 w-28 bg-white border border-gray-200 rounded-md shadow-lg z-20">
+                  {["English", "French", "Spanish"].map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        setSelectedLang(lang);
+                        setShowLang(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      {lang}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </header>
 
         {/* Center chat content */}
