@@ -65,7 +65,7 @@ function ChatInterface() {
 
     // Fake bot reply
     setTimeout(() => {
-      const botReply = { sender: "bot", text: "Got it! (Placeholder response)" };
+      const botReply = { sender: "bot", text: "(Placeholder)" };
       const newChatMessages = [...updatedMessages, botReply];
       setMessages(newChatMessages);
 
@@ -95,9 +95,11 @@ function ChatInterface() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.length === 0 ? (
-              <p className="text-gray-500 text-center mt-4">
-                Start typing to begin a chat...
-              </p>
+              <div className="flex items-end justify-center h-full pb-75">
+                <p className="text-gray-500 text-center text-lg">
+                  Start typing to begin a chat...
+                </p>
+              </div>
             ) : (
               messages.map((msg, idx) => (
                 <div

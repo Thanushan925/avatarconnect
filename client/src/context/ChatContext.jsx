@@ -5,6 +5,7 @@ export const ChatContext = createContext();
 export const ChatProvider = ({ children }) => {
   const [chats, setChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [trash, setTrash] = useState([]);
 
   // Example functions for later expansion
   const addChat = (name) => setChats((prev) => [...prev, name]);

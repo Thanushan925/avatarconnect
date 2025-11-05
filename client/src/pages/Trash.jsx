@@ -11,18 +11,59 @@ function Trash() {
   }, []);
 
   const loadTrashed = async () => {
-    const res = await getDeletedChats();
-    setTrashedChats(res.data);
+    try {
+      // ⚡ Load localStorage trash first (instant)
+      const localTrash = JSON.parse(localStorage.getItem("trash")) || [];
+      setTrashedChats(localTrash);
+
+      // 🔄 Then try loading from DB in the background
+      try {
+        const res = await getDeletedChats();
+        const dbTrash = res.data || [];
+        if (dbTrash.length > 0) {
+          // Merge and remove duplicates
+          const merged = [
+            ...dbTrash,
+            ...localTrash.filter(
+              (local) => !dbTrash.some((db) => db._id === local._id)
+            ),
+          ];
+          setTrashedChats(merged);
+        }
+      } catch {
+        console.warn("No deleted chats from DB or server slow.");
+      }
+    } catch (err) {
+      console.error("Error loading trashed chats:", err);
+    }
   };
 
   const handleRecoverChat = async (id) => {
-    await restoreChat(id);
-    setTrashedChats(trashedChats.filter((chat) => chat._id !== id));
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+
+    if (isMongoId) {
+      await restoreChat(id);
+    } else {
+      const localTrash = JSON.parse(localStorage.getItem("trash")) || [];
+      const updatedTrash = localTrash.filter((chat) => chat._id !== id);
+      localStorage.setItem("trash", JSON.stringify(updatedTrash));
+    }
+
+    setTrashedChats((prev) => prev.filter((chat) => chat._id !== id));
   };
 
   const handleDeleteForever = async (id) => {
-    await deleteChatPermanent(id);
-    setTrashedChats(trashedChats.filter((chat) => chat._id !== id));
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+
+    if (isMongoId) {
+      await deleteChatPermanent(id);
+    } else {
+      const localTrash = JSON.parse(localStorage.getItem("trash")) || [];
+      const updatedTrash = localTrash.filter((chat) => chat._id !== id);
+      localStorage.setItem("trash", JSON.stringify(updatedTrash));
+    }
+
+    setTrashedChats((prev) => prev.filter((chat) => chat._id !== id));
   };
 
   return (
@@ -38,7 +79,7 @@ function Trash() {
                 key={chat._id}
                 className="flex items-center justify-between bg-white shadow-md rounded-lg px-6 py-4 hover:shadow-lg transition"
               >
-                <span className="text-gray-800 font-medium">{chat.title}</span>
+                <span className="text-gray-800 font-medium">{chat.name || chat.title}</span>
                 <div className="flex space-x-4">
                   <button
                     onClick={() => handleRecoverChat(chat._id)}

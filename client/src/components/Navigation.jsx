@@ -46,8 +46,24 @@ function Navigation() {
   // --- Delete chat (moves to trash) ---
   const handleDeleteChat = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/chats/${id}`);
-      setChats(chats.filter((chat) => chat._id !== id));
+      const deletedChat = chats.find((chat) => chat._id === id);
+      if (!deletedChat) return;
+
+      // Save to localStorage Trash
+      const existingTrash = JSON.parse(localStorage.getItem("trash")) || [];
+      localStorage.setItem(
+        "trash",
+        JSON.stringify([...existingTrash, { ...deletedChat, deleted: true }])
+      );
+
+      // Remove from UI
+      setChats((prev) => prev.filter((chat) => chat._id !== id));
+
+      // Optionally, call backend delete if chat exists there
+      const isMongoId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (isMongoId) {
+        await axios.delete(`http://localhost:5000/api/chats/${id}`);
+      }
     } catch (err) {
       console.error("Error deleting chat:", err);
     }
@@ -116,9 +132,7 @@ function Navigation() {
                 console.error("Error creating new chat:", err);
               }
             }}
-            className={`flex items-center space-x-2 w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${
-              location.pathname === "/" ? "bg-gray-200 font-semibold" : ""
-            }`}
+            className="flex items-center space-x-2 w-full text-left px-2 py-1 rounded hover:bg-gray-100"
           >
             <RxChatBubble size={18} />
             <span>New Chat</span>
