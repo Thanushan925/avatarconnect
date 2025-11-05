@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   RxHamburgerMenu,
   RxCross2,
@@ -9,16 +9,70 @@ import {
   RxPencil2,
 } from "react-icons/rx";
 import { ChatContext } from "../context/ChatContext";
+import axios from "axios";
 
 function Navigation() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { chats, setChats } = useContext(ChatContext);
+  const { chats, setChats, setSelectedChat } = useContext(ChatContext);
   const location = useLocation();
+  const navigate = useNavigate();
   const sidebarRef = useRef(null);
-
   const handleLinkClick = () => setSidebarOpen(false);
 
-  // Close sidebar when clicking outside
+  // --- Load chats from MongoDB ---
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/chats");
+        setChats(res.data);
+      } catch (err) {
+        console.error("Error fetching chats:", err);
+      }
+    };
+    fetchChats();
+  }, [setChats]);
+
+  // --- Create new chat ---
+  const handleNewChat = async () => {
+    try {
+      const newChat = { name: `New Chat ${chats.length + 1}` };
+      const res = await axios.post("http://localhost:5000/api/chats", newChat);
+      setChats([...chats, res.data]);
+    } catch (err) {
+      console.error("Error creating chat:", err);
+    }
+  };
+
+  // --- Delete chat (moves to trash) ---
+  const handleDeleteChat = async (id) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/chats/${id}`);
+      setChats(chats.filter((chat) => chat._id !== id));
+    } catch (err) {
+      console.error("Error deleting chat:", err);
+    }
+  };
+
+  // --- Rename chat ---
+  const handleRenameChat = async (id, currentName) => {
+    const newName = prompt("Enter new chat name:", currentName);
+    if (newName && newName.trim() !== "") {
+      try {
+        const res = await axios.put(`http://localhost:5000/api/chats/${id}`, {
+          name: newName.trim(),
+        });
+        setChats(
+          chats.map((chat) =>
+            chat._id === id ? { ...chat, name: res.data.name } : chat
+          )
+        );
+      } catch (err) {
+        console.error("Error renaming chat:", err);
+      }
+    }
+  };
+
+  // --- Close sidebar on outside click ---
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (sidebarRef.current && !sidebarRef.current.contains(e.target)) {
@@ -29,29 +83,13 @@ function Navigation() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // --- Chat Actions ---
-  const handleDeleteChat = (idx) => {
-    const updatedChats = chats.filter((_, i) => i !== idx);
-    setChats(updatedChats);
-  };
-
-  const handleRenameChat = (idx) => {
-    const newName = prompt("Enter new chat name:", chats[idx]);
-    if (newName && newName.trim() !== "") {
-      const updatedChats = [...chats];
-      updatedChats[idx] = newName.trim();
-      setChats(updatedChats);
-    }
-  };
-
   return (
     <>
       {/* Sidebar */}
       <aside
         ref={sidebarRef}
         className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md transform transition-transform duration-300 ease-in-out z-20
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-      `}
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-lg font-semibold">Menu</h2>
@@ -61,17 +99,31 @@ function Navigation() {
         </div>
 
         <div className="p-4 flex flex-col space-y-3">
-          {/* Sidebar Links */}
+          {/* ✅ Only one "New Chat" button */}
           <Link
             to="/"
-            onClick={handleLinkClick}
-            className={`flex items-center space-x-2 px-2 py-1 rounded hover:bg-gray-100 ${
+            onClick={async () => {
+              try {
+                const newChat = {
+                  _id: Date.now().toString(),
+                  name: `Chat ${chats.length + 1}`,
+                  messages: [],
+                };
+                setChats([...chats, newChat]);
+                setSelectedChat(newChat);
+                navigate("/"); // Go to chat interface
+              } catch (err) {
+                console.error("Error creating new chat:", err);
+              }
+            }}
+            className={`flex items-center space-x-2 w-full text-left px-2 py-1 rounded hover:bg-gray-100 ${
               location.pathname === "/" ? "bg-gray-200 font-semibold" : ""
             }`}
           >
             <RxChatBubble size={18} />
             <span>New Chat</span>
           </Link>
+
 
           <Link
             to="/settings"
@@ -97,29 +149,33 @@ function Navigation() {
 
           {/* Chat List */}
           <div className="mt-4 font-semibold">Chats</div>
-          {chats.map((chat, idx) => (
+          {chats.map((chat) => (
             <div
-              key={idx}
+              key={chat._id}
               className="group flex items-center justify-between px-2 py-1 rounded hover:bg-gray-100 transition"
             >
               <button
-                onClick={handleLinkClick}
+                onClick={() => {
+                  setSelectedChat(chat);
+                  handleLinkClick();
+                  navigate("/"); // Go to main chat interface
+                }}
                 className="text-left flex-1 truncate"
               >
-                {chat}
+                {chat.name}
               </button>
 
-              {/* Icons (only visible on hover) */}
+              {/* Icons (on hover) */}
               <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                  onClick={() => handleRenameChat(idx)}
+                  onClick={() => handleRenameChat(chat._id, chat.name)}
                   title="Rename Chat"
                   className="text-blue-600 hover:text-blue-800 transition"
                 >
                   <RxPencil2 size={16} />
                 </button>
                 <button
-                  onClick={() => handleDeleteChat(idx)}
+                  onClick={() => handleDeleteChat(chat._id)}
                   title="Delete Chat"
                   className="text-red-600 hover:text-red-800 transition"
                 >
